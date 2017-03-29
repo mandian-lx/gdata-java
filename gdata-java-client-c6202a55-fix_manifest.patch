@@ -1,0 +1,214 @@
+--- a/java/build-src/core.xml.manifest
++++ b/java/build-src/core.xml
+@@ -11,8 +11,10 @@
+ 
+ 
+   <!-- Path for generated files -->
++  <property name="build.bnd" value="${build}/bnd"/>
+   <property name="build.manifest" value="${build}/manifest"/>
+   <property name="build.genfiles" value="${build}/genfiles"/>
++  <property name="build.genfiles.bnd" value="${build.genfiles}/bnd"/>
+   <property name="build.genfiles.manifest" value="${build.genfiles}/manifest"/>
+   <property name="build.genfiles.meta" value="${build.genfiles}/meta"/>
+ 
+@@ -28,8 +30,12 @@
+   <property file="${version.properties}"/>
+   <property file="${build.properties}"/>
+ 
++  <property name="gdata-client.bar"
++            value="${build.jars}/gdata-client-${client.spec.version}.bar"/>
+   <property name="gdata-client.jar"
+             value="${build.jars}/gdata-client-${client.spec.version}.jar"/>
++  <property name="gdata-media.bar"
++            value="${build.jars}/gdata-media-${media.spec.version}.bar"/>
+   <property name="gdata-media.jar"
+             value="${build.jars}/gdata-media-${media.spec.version}.jar"/>
+ 
+@@ -42,6 +48,19 @@
+     <mkdir dir="${build.classes}"/>
+   </target>
+ 
++  <!-- Generates bnd files with appropriate version information. -->
++  <target name="build.bnd">
++    <mkdir dir="${build.genfiles.bnd}"/>
++    <copy todir="${build.genfiles.bnd}">
++      <fileset dir="${build.bnd}">
++        <include name="*.bnd"/>
++      </fileset>
++      <filterset>
++        <filtersfile file="${version.properties}"/>
++      </filterset>
++    </copy>
++  </target>
++  
+   <!-- Generates manifest files with appropriate version information. -->
+   <target name="build.manifest">
+     <mkdir dir="${build.genfiles.manifest}"/>
+@@ -89,10 +108,14 @@
+       value="${template.service.meta}/META-INF/gdata/kinds"/>
+     <property name="template.service.meta.jar"
+       value="${build.jars}/gdata-${template.service.name}-meta-${template.service.version}.jar"/>
++    <property name="template.service.bar"
++      value="${build.jars}/gdata-${template.service.name}-${template.service.version}.bar"/>
+     <property name="template.service.jar"
+       value="${build.jars}/gdata-${template.service.name}-${template.service.version}.jar"/>
+     <property name="template.service.classes"
+       value="${build.classes}/${template.service.name}"/>
++    <property name="template.service.bnd"
++      value="${build.genfiles.bnd}/${template.service.name}.bnd"/>
+     <property name="template.service.manifest"
+       value="${build.genfiles.manifest}/${template.service.name}.manifest"/>
+ 
+@@ -161,8 +184,19 @@
+           <compilerarg line="-proc:none"/>
+     </javac>
+     <jar destfile="${template.service.jar}"
+-         basedir="${template.service.classes}"
+-         manifest="${template.service.manifest}"/>
++         basedir="${template.service.classes}"/>
++     <!--    manifest="${template.service.manifest}"/-->
++
++    <!-- generate OSGi jar from scratch -->
++    <taskdef resource="aQute/bnd/ant/taskdef.properties" classpath="/usr/share/java/aqute-bnd.jar"/>
++    <bnd
++      classpath="${template.service.jar}"
++      failok="false"
++      exceptions="true"
++      output="${template.service.bar}"
++      files="${template.service.bnd}"/>
++    <delete file="${template.service.jar}"/>
++    <move file="${template.service.bar}" toFile="${template.service.jar}" />
+   </target>
+ 
+ 
+@@ -173,6 +207,7 @@
+   <target name="template.clean.service">
+     <delete dir="${build.classes}/${template.service.name}"/>
+     <delete dir="${build.genfiles.meta}/${template.service.name}"/>
++    <delete file="${build.genfiles.bnd}/${template.service.name}.bnd"/>
+     <delete file="${build.genfiles.manifest}/${template.service.name}.manifest"/>
+   </target>
+ 
+@@ -200,10 +235,16 @@
+ <!--  ===================================================================== -->
+ 
+   <!-- Path for generated files -->
++  <property name="gdata-core.bnd"
++            value="${build.genfiles.bnd}/core.bnd"/>
+   <property name="gdata-core.manifest"
+             value="${build.genfiles.manifest}/core.manifest"/>
++  <property name="gdata-client.bnd"
++            value="${build.genfiles.bnd}/client.bnd"/>
+   <property name="gdata-client.manifest"
+             value="${build.genfiles.manifest}/client.manifest"/>
++  <property name="gdata-media.bnd"
++            value="${build.genfiles.bnd}/media.bnd"/>
+   <property name="gdata-media.manifest"
+             value="${build.genfiles.manifest}/media.manifest"/>
+   <property name="build.genfiles.meta.client"
+@@ -216,8 +257,12 @@
+   <property name="build.classes.core" value="${build.classes}/core"/>
+   <property name="build.classes.client" value="${build.classes}/client"/>
+   <property name="build.classes.media" value="${build.classes}/media"/>
++  <property name="gdata-core.bar"
++            value="${build.jars}/gdata-core-${client.spec.version}.bar"/>
+   <property name="gdata-core.jar"
+             value="${build.jars}/gdata-core-${client.spec.version}.jar"/>
++  <property name="gdata-client-meta.bar"
++            value="${build.jars}/gdata-client-meta-${client.spec.version}.bar"/>
+   <property name="gdata-client-meta.jar"
+             value="${build.jars}/gdata-client-meta-${client.spec.version}.jar"/>
+ 
+@@ -244,13 +289,16 @@
+     <delete dir="${build.classes.core}"/>
+     <delete dir="${build.classes.client}"/>
+     <delete dir="${build.genfiles.meta.client}"/>
++    <delete file="${gdata-core.bnd}"/>
+     <delete file="${gdata-core.manifest}"/>
++    <delete file="${gdata-client.bnd}"/>
+     <delete file="${gdata-client.manifest}"/>
+   </target>
+ 
+ 
+   <!-- build gdata-core.jar -->
+-  <target name="build.core.base" depends="dirs,build.manifest">
++  <target name="build.core.base" depends="dirs,build.bnd,build.manifest">
++
+     <mkdir dir="${build.classes.core}"/>
+ 
+     <javac debug="${javac.debug}"
+@@ -292,9 +340,20 @@
+     <!--echo output="${build.classes.core}/META-INF/services/javax.annotation.processing.Processor"
+           message="com.google.gdata.data.apt.DataAnnotationProcessorFactory"/-->
+     <jar destfile="${gdata-core.jar}"
+-         basedir="${build.classes.core}"
+-         manifest="${gdata-core.manifest}">
++         basedir="${build.classes.core}">
++    <!--     manifest="${gdata-core.manifest}"-->
+     </jar>
++
++    <!-- generate OSGi jar from scratch -->
++    <taskdef resource="aQute/bnd/ant/taskdef.properties" classpath="/usr/share/java/aqute-bnd.jar"/>
++    <bnd
++      classpath="${gdata-core.jar}"
++      failok="false"
++      exceptions="true"
++      output="${gdata-core.bar}"
++      files="${gdata-core.bnd}"/>
++    <delete file="${gdata-core.jar}"/>
++    <move file="${gdata-core.bar}" toFile="${gdata-core.jar}" />
+   </target>
+ 
+ 
+@@ -349,9 +408,21 @@
+        	<compilerarg line="-proc:none"/>
+     </javac>
+     <jar destfile="${gdata-client.jar}"
+-         basedir="${build.classes.client}"
+-         manifest="${gdata-client.manifest}">
++         basedir="${build.classes.client}">
++    <!--     manifest="${gdata-client.manifest}"-->
+     </jar>
++
++    <!-- generate OSGi jar from scratch -->
++    <taskdef resource="aQute/bnd/ant/taskdef.properties" classpath="/usr/share/java/aqute-bnd.jar"/>
++    <bnd
++      classpath="${gdata-client.jar}"
++      eclipse="false"
++      failok="false"
++      exceptions="true"
++      output="${gdata-client.bar}"
++      files="${gdata-client.bnd}"/>
++    <delete file="${gdata-client.jar}"/>
++    <move file="${gdata-client.bar}" toFile="${gdata-client.jar}" />
+   </target>
+ 
+ 
+@@ -385,13 +456,25 @@
+       <compilerarg line="-proc:none"/>
+     </javac>
+     <jar destfile="${gdata-media.jar}"
+-         basedir="${build.classes.media}"
+-         manifest="${gdata-media.manifest}">
++         basedir="${build.classes.media}">
++    <!--     manifest="${gdata-media.manifest}"-->
+     </jar>
++
++    <!-- generate OSGi jar from scratch -->
++    <taskdef resource="aQute/bnd/ant/taskdef.properties" classpath="/usr/share/java/aqute-bnd.jar"/>
++    <bnd
++      classpath="${gdata-media.jar}"
++      failok="false"
++      exceptions="true"
++      output="${gdata-media.bar}"
++      files="${gdata-media.bnd}"/>
++    <delete file="${gdata-media.jar}"/>
++    <move file="${gdata-media.bar}" toFile="${gdata-media.jar}" />
+   </target>
+ 
+   <target name="clean.core.media">
+     <delete dir="${build.classes.media}"/>
++    <delete file="${gdata-media.bnd}"/>
+     <delete file="${gdata-media.manifest}"/>
+   </target>
+ 

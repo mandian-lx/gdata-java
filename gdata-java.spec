@@ -16,6 +16,7 @@ Source0:        https://github.com/google/%{name}-client/archive/%{commit}/%{nam
 Source1:        https://repo1.maven.org/maven2/com/google/gdata/core/1.47.1/core-1.47.1.pom
 Patch0:         %{name}-client-c6202a55-remove_deprecated_modules.patch
 Patch1:         %{name}-client-c6202a55-fix_annotation.patch
+Patch2:         %{name}-client-c6202a55-fix_manifest.patch
 BuildArch:      noarch
 
 BuildRequires:  jpackage-utils
@@ -74,6 +75,7 @@ find . -name "*.class" -delete
 # Apply all patches
 %patch0 -p1 -b .modules
 %patch1 -p1 -b .annotation
+%patch2 -p1 -b .manifest
 
 pushd java
 rm -rf lib/* deps/* classes doc
@@ -98,6 +100,21 @@ for i in $(ls manifest/*.manifest); do
   sed -i '/class-path/I d' $i
   echo "Export-Package: $(grep '^Name' $i | sed -e 's|^Name: *||' -e 's|/|.|g' -e 's|.$||');version=\"%{version}\"" >> $i
 done
+
+mkdir bnd
+for i in $(ls manifest/*.manifest); do
+  b=${i//manifest/bnd}
+  sed -e '/class-path/I d' -e '/Export-Package:/I d' -e '/Name:/I d' $i > $b
+  grep '^Name' $i | sed -e 's|^Name: *|Bundle-SymbolicName: |' -e 's|/|.|g' -e 's|.$||' >> $b
+  grep '^Specification-Title' $i | sed -e 's|^Specification-Title: *|Bundle-Name: |' >> $b
+  grep '^Implementation-Title' $i | sed -e 's|^Implementation-Title: *|Bundle-Description: |' >> $b
+  grep '^Specification-Version' $i | sed -e 's|^Specification-Version: *|Bundle-Version: |' >> $b
+  echo "Export-Package: *" >> $b
+done
+
+# fix client.bnd
+sed -i -e "s|com.google.gdata.client|com.google.gdata.data.extensions|g" bnd/client.bnd
+echo "Import-Package: !com.google.gdata.data.extensions,*" >> bnd/client.bnd
 
 popd
 

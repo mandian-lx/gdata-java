@@ -21,6 +21,7 @@ BuildArch:      noarch
 
 BuildRequires:  jpackage-utils
 BuildRequires:  ant
+BuildRequires:  aqute-bnd
 BuildRequires:  google-oauth-java-client
 BuildRequires:  google-http-java-client
 BuildRequires:  guava

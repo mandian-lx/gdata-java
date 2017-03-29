@@ -133,10 +133,10 @@ cp %{SOURCE1} gdata-core-pom.xml
 export CLASSPATH=$(build-classpath google-oauth-java-client google-http-java-client guava javamail/mail jsr-305)
 
 pushd java
-ant -lib lib/%{genericname}-core-1.0.jar:lib/%{genericname}-client-1.0.jar -buildfile build-src.xml clean build
+%ant -lib lib/%{genericname}-core-1.0.jar:lib/%{genericname}-client-1.0.jar -buildfile build-src.xml clean build
 
 find src -name '*.java' |xargs javadoc -classpath \
-  `build-classpath javamail guava jsr-305`:/etc/alternatives/java_sdk_openjdk/lib/tools.jar -d doc
+  `build-classpath javamail google-oauth-java-client google-http-java-client guava jsr-305`:/etc/alternatives/java_sdk_openjdk/lib/tools.jar -d doc
 popd
 
 %install
